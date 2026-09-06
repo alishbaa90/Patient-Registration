@@ -1,7 +1,7 @@
 import re
 from datetime import date
 from typing import Optional
-from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
+from pydantic import BaseModel, EmailStr, field_validator, model_validator, ConfigDict
 
 VALID_SEX = {"Male", "Female", "Other", "Decline to Answer"}
 US_STATES = {
@@ -28,6 +28,19 @@ class PatientBase(BaseModel):
     preferred_language: Optional[str] = "English"
     emergency_contact_name: Optional[str] = None
     emergency_contact_phone: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def blank_strings_to_none(cls, data):
+        """Voice agents (Vapi, Retell, etc.) often send an empty string ""
+        for optional fields the caller never provided, instead of omitting
+        the field entirely. This converts blank strings to None so optional
+        fields are treated as "not provided" rather than "invalid"."""
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if isinstance(value, str) and value.strip() == "":
+                    data[key] = None
+        return data
 
     @field_validator("first_name", "last_name")
     @classmethod
