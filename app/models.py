@@ -33,7 +33,8 @@ class Patient(Base):
     deleted_at = Column(DateTime, nullable=True)  # soft delete ke liye
 
 # --- DB connection setup ---
-DATABASE_URL = "sqlite:///./patients.db"
+import os
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////data/patients.db")
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
