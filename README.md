@@ -37,11 +37,11 @@ call today, a web form tomorrow, and the validation rules would still hold.
 
 | Part | What I used | Why |
 |---|---|---|
-| Phone + voice | **Vapi** | Gives you a free US number instantly, handles speech-to-text/text-to-speech/LLM orchestration out of the box, and has a simple UI for wiring up tools to a backend. |
+| Phone + voice | **Vapi** | Gives you a free US number instantly, handles speech-to-text/text-to-speech/LLM orchestration out of the box, and has a simple UI for wiring up tools to a backend. Given the 3-hour limit, this was clearly the fastest path to something that actually works end to end. |
 | LLM | **GPT-4.1** (through Vapi) | Needed something that could follow a fairly long, multi-step conversation (collect info → confirm → handle corrections → save) without wandering off track. |
 | Backend | **FastAPI** | Quick to write, validates requests automatically, and comes with a built-in `/docs` page that made testing everything by hand a lot faster. |
 | Database | **SQLite** | No setup at all — a file is the whole database. Good enough for a project like this. The obvious trade-off is it's not built for a lot of concurrent writes, which is fine here but wouldn't be for a real clinic. |
-| Hosting | **Railway** | Push to GitHub, it deploys automatically, gives you a public URL right away.  |
+| Hosting | **Railway** | Push to GitHub, it deploys automatically, gives you a public URL right away. Free tier was more than enough for this. |
 
 ## What the API looks like
 
@@ -99,9 +99,9 @@ wording.
 git clone https://github.com/alishbaa90/Patient-Registration.git
 cd Patient-Registration
 python3 -m venv venv
-source venv/bin/activate      
+source venv/bin/activate      # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python3 seed.py             
+python3 seed.py               # optional — adds 2 demo patients
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -115,6 +115,18 @@ hardcoded in this repo.
 
 ## Things I ran into / trade-offs I made
 
+- **The update flow doesn't work end-to-end over the phone yet.** The agent
+  correctly recognizes a returning caller by phone number (via
+  `lookup_patient`) and offers to update their info — that part works. But
+  the actual save through the `update_patient` voice tool fails. The
+  `PUT /patients/{id}` endpoint itself works correctly — I verified this
+  directly through `/docs` (partial updates succeed as expected). The issue
+  is isolated to how the Vapi tool is wired up (getting the caller's
+  existing patient ID and changed fields into that specific tool call), not
+  the backend logic. Given the time limit, I'm documenting this rather than
+  leaving it half-fixed. **Workaround for now:** a returning caller's info
+  can still be updated directly via the API (`PUT /patients/{id}`) even
+  though the phone flow can't complete it yet.
 - **SQLite on Railway resets by default.** I actually caught this while
   testing — I registered a patient, restarted the service, and the record
   was gone. Turns out Railway's filesystem doesn't persist between restarts
